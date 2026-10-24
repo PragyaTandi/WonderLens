@@ -1,0 +1,243 @@
+.stem-hero {
+position: relative;
+isolation: isolate;
+display: flex;
+align-items: center;
+min-height: 610px;
+padding: 76px max(7%, calc((100% - 1320px) / 2));
+overflow: hidden;
+background: #10131e;
+color: #faf9f6;
+}
+
+.stem-backgrounds,
+.stem-background,
+.stem-overlay {
+position: absolute;
+inset: 0;
+pointer-events: none;
+}
+
+.stem-backgrounds {
+z-index: -2;
+background: #10131e;
+}
+
+.stem-background {
+background-size: cover;
+background-position: center;
+opacity: 0;
+transform: scale(1.04);
+transition:
+opacity 850ms ease-in-out,
+transform 3.5s ease-out;
+will-change: opacity, transform;
+}
+
+.stem-background.is-active {
+opacity: 1;
+transform: scale(1.1);
+}
+
+.stem-overlay {
+z-index: -1;
+background:
+linear-gradient(
+90deg,
+rgba(10, 13, 23, 0.93) 0%,
+rgba(10, 13, 23, 0.82) 43%,
+rgba(10, 13, 23, 0.42) 75%,
+rgba(10, 13, 23, 0.25) 100%
+),
+linear-gradient(
+0deg,
+rgba(10, 13, 23, 0.45),
+transparent 45%,
+rgba(10, 13, 23, 0.15)
+);
+}
+
+.stem-hero-content {
+width: 100%;
+max-width: 760px;
+}
+
+.stem-eyebrow {
+display: inline-block;
+margin-bottom: 24px;
+color: #c2d9c1;
+font-family: Arial, sans-serif;
+font-size: 12px;
+font-weight: 600;
+letter-spacing: 0.18em;
+}
+
+.stem-hero h1 {
+max-width: 760px;
+margin: 0;
+color: #faf9f6;
+font-family: Georgia, "Times New Roman", serif;
+font-size: clamp(42px, 5.2vw, 76px);
+font-weight: 400;
+letter-spacing: -0.045em;
+line-height: 1.08;
+text-wrap: balance;
+}
+
+.stem-hero-content > p {
+max-width: 590px;
+margin: 24px 0 32px;
+color: rgba(250, 249, 246, 0.86);
+font-family: Arial, sans-serif;
+font-size: 17px;
+line-height: 1.85;
+}
+
+.stem-hero-actions {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+gap: 12px;
+}
+
+.stem-button {
+display: inline-flex;
+min-height: 46px;
+align-items: center;
+justify-content: center;
+gap: 9px;
+padding: 12px 17px;
+border: 1px solid transparent;
+border-radius: 8px;
+cursor: pointer;
+font-family: Arial, sans-serif;
+font-size: 14px;
+font-weight: 500;
+transition:
+background 180ms ease,
+border-color 180ms ease,
+transform 180ms ease;
+}
+
+.stem-button:hover {
+transform: translateY(-2px);
+}
+
+.stem-button-primary {
+background: #41664a;
+color: white;
+}
+
+.stem-button-primary:hover {
+background: #527b5b;
+}
+
+.stem-button-secondary {
+border-color: rgba(255, 255, 255, 0.45);
+background: rgba(255, 255, 255, 0.1);
+color: white;
+backdrop-filter: blur(8px);
+}
+
+.stem-button-secondary:hover {
+background: rgba(255, 255, 255, 0.19);
+}
+
+.stem-button-quiet {
+background: transparent;
+color: #faf9f6;
+}
+
+.stem-button-quiet:hover {
+background: rgba(255, 255, 255, 0.1);
+}
+
+.stem-world-indicator {
+display: flex;
+align-items: center;
+gap: 20px;
+margin-top: 52px;
+color: rgba(250, 249, 246, 0.9);
+font-family: Arial, sans-serif;
+font-size: 11px;
+font-weight: 600;
+letter-spacing: 0.12em;
+}
+
+.stem-progress {
+display: flex;
+gap: 6px;
+}
+
+.stem-progress-segment {
+width: 28px;
+height: 3px;
+padding: 0;
+border: 0;
+border-radius: 5px;
+background: rgba(255, 255, 255, 0.38);
+cursor: pointer;
+transition:
+width 250ms ease,
+background 250ms ease;
+}
+
+.stem-progress-segment.is-active {
+width: 48px;
+background: #c2d9c1;
+}
+
+.stem-progress-segment:focus-visible,
+.stem-button:focus-visible {
+outline: 2px solid #c2d9c1;
+outline-offset: 4px;
+}
+
+@media (max-width: 700px) {
+.stem-hero {
+min-height: 650px;
+padding: 64px 24px;
+}
+
+.stem-overlay {
+background: rgba(10, 13, 23, 0.76);
+}
+
+.stem-hero h1 {
+font-size: clamp(40px, 10vw, 58px);
+}
+
+.stem-hero-content > p {
+font-size: 15px;
+line-height: 1.75;
+}
+
+.stem-hero-actions {
+align-items: stretch;
+flex-direction: column;
+}
+
+.stem-button {
+width: 100%;
+}
+
+.stem-world-indicator {
+margin-top: 36px;
+}
+}
+
+@media (prefers-reduced-motion: reduce) {
+.stem-background,
+.stem-button,
+.stem-progress-segment {
+transition: none;
+}
+
+.stem-background.is-active {
+transform: none;
+}
+
+.stem-button:hover {
+transform: none;
+}
+}
