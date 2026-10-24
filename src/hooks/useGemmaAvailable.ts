@@ -3,8 +3,16 @@ import { isGemmaAvailable } from '@/lib/gemma';
 
 export function useGemmaAvailable() {
   const [available, setAvailable] = useState(false);
+
   useEffect(() => {
-    isGemmaAvailable().then(setAvailable);
+    let active = true;
+    isGemmaAvailable().then((result) => {
+      if (active) setAvailable(result);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
+
   return available;
 }

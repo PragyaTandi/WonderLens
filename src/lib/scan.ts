@@ -1,4 +1,5 @@
-import { topics, getTopic } from '@/data/topics';
+import { getTopic, topics } from '@/data/topics';
+import { gemmaJSON } from '@/lib/gemma';
 
 export interface Discovery {
   title: string;
@@ -15,8 +16,6 @@ export interface ScanResult {
   relatedTopicIds: string[];
 }
 
-const MODEL = 'gemma3:4b';
-
 const schema = {
   type: 'object',
   properties: {
@@ -24,6 +23,8 @@ const schema = {
     summary: { type: 'string' },
     discoveries: {
       type: 'array',
+      minItems: 3,
+      maxItems: 4,
       items: {
         type: 'object',
         properties: {
@@ -36,14 +37,14 @@ const schema = {
     },
     funFact: { type: 'string' },
     tryThis: { type: 'string' },
-    relatedTopicIds: { type: 'array', items: { type: 'string' } },
+    relatedTopicIds: { type: 'array', maxItems: 3, items: { type: 'string' } },
   },
   required: ['subject', 'summary', 'discoveries', 'funFact', 'tryThis', 'relatedTopicIds'],
 };
 
-const topicList = topics.map((t) => `${t.id}: ${t.question}`).join('\n');
+const topicList = topics.map((topic) => `${topic.id}: ${topic.question}`).join('\n');
 
-const PROMPT = `Look at this image. Identify the main subject, then reveal the hidden science, math, or engineering behind it.
+const prompt = `Look at this image. Identify the main subject, then reveal the hidden science, math, or engineering behind it.
 - "discoveries": 3 to 4 non-obvious insights about why it looks or works this way. Be specific and intuitive.
 - "funFact": one surprising fact.
 - "tryThis": one safe, simple observation or experiment.
@@ -53,22 +54,45 @@ Write for a curious teenager. If the image is unclear, say so in "summary".
 Topics:
 ${topicList}`;
 
+function isScanResult(value: unknown): value is ScanResult {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'subject' in value &&
+    typeof value.subject === 'string' &&
+    'summary' in value &&
+    typeof value.summary === 'string' &&
+    'discoveries' in value &&
+    Array.isArray(value.discoveries) &&
+    value.discoveries.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'title' in item &&
+        typeof item.title === 'string' &&
+        'explanation' in item &&
+        typeof item.explanation === 'string' &&
+        'field' in item &&
+        typeof item.field === 'string',
+    ) &&
+    'funFact' in value &&
+    typeof value.funFact === 'string' &&
+    'tryThis' in value &&
+    typeof value.tryThis === 'string' &&
+    'relatedTopicIds' in value &&
+    Array.isArray(value.relatedTopicIds) &&
+    value.relatedTopicIds.every((id) => typeof id === 'string')
+  );
+}
+
 export async function scanImage(base64: string, signal?: AbortSignal): Promise<ScanResult> {
-  const res = await fetch('/ollama/api/chat', {
-    method: 'POST',
+  const result = await gemmaJSON<unknown>({
+    messages: [{ role: 'user', content: prompt, images: [base64] }],
+    schema,
     signal,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL,
-      stream: false,
-      format: schema,
-      options: { temperature: 0.4 },
-      messages: [{ role: 'user', content: PROMPT, images: [base64] }],
-    }),
   });
-  if (!res.ok) throw new Error(`Scan failed: ${res.status}`);
-  const data = await res.json();
-  const parsed = JSON.parse(data.message.content) as ScanResult;
-  parsed.relatedTopicIds = (parsed.relatedTopicIds ?? []).filter((id) => getTopic(id));
-  return parsed;
+  if (!isScanResult(result)) throw new Error('Gemma returned an incomplete scan result');
+
+  result.relatedTopicIds = result.relatedTopicIds.filter((id) => getTopic(id));
+  return result;
 }

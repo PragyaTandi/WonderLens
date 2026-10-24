@@ -1,5 +1,4 @@
 import { ScanPage } from '@/pages/ScanPage';
-import StemHero from "./StemHero";
 import { useRouter } from '@/hooks/useRouter';
 import { useCollection } from '@/hooks/useCollection';
 import { Navigation } from '@/components/Navigation';
@@ -9,7 +8,6 @@ import { ExplorePage } from '@/pages/ExplorePage';
 import { RediscoverPage } from '@/pages/RediscoverPage';
 import { DiscoveryPage } from '@/pages/DiscoveryPage';
 import { CollectionPage } from '@/pages/CollectionPage';
-import { PageRoute } from './data/types';
 
 export default function App() {
   const { route, navigate } = useRouter();
@@ -43,9 +41,7 @@ export default function App() {
             toggleSave={toggleSave}
           />
         )}
-        {route.name === 'scan' && <ScanPage navigate={function (r: PageRoute): void {
-          throw new Error('Function not implemented.');
-        } } />}
+        {route.name === 'scan' && <ScanPage navigate={navigate} />}
       </main>
 
       <Footer />

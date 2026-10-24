@@ -2,14 +2,26 @@ import { useRef, useState } from 'react';
 import { Sparkles, Send, Loader2 } from 'lucide-react';
 import type { Topic } from '@/data/types';
 import { gemmaChat, type ChatMsg } from '@/lib/gemma';
+import { useGemmaAvailable } from '@/hooks/useGemmaAvailable';
 
 export function AskGemma({ topic }: { topic: Topic }) {
+  const available = useGemmaAvailable();
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ChatMsg[]>([]);
   const [streaming, setStreaming] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  if (!available) {
+    return (
+      <section className="container-editorial pb-12">
+        <p className="rounded-lg border border-ink/10 bg-page p-4 text-sm text-ink-muted">
+          Gemma is unavailable. Start Ollama and make sure the configured Gemma model is installed.
+        </p>
+      </section>
+    );
+  }
 
   const context = [
     `Topic: ${topic.question}`,
@@ -41,7 +53,9 @@ export function AskGemma({ topic }: { topic: Topic }) {
       setHistory([...next, { role: 'assistant', content: reply }]);
       setStreaming('');
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') setError('Gemma could not answer. Is Ollama running?');
+      if ((e as Error).name !== 'AbortError') {
+        setError(e instanceof Error ? e.message : 'Gemma could not answer');
+      }
     } finally {
       setLoading(false);
     }
@@ -65,7 +79,9 @@ export function AskGemma({ topic }: { topic: Topic }) {
               {m.content}
             </p>
           ))}
-          {streaming && <p className="text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">{streaming}</p>}
+          {streaming && (
+            <p className="text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">{streaming}</p>
+          )}
           {error && <p className="text-sm text-terracotta">{error}</p>}
         </div>
 

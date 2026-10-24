@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Camera, Upload, Loader2, Sparkles, FlaskConical, ArrowRight } from 'lucide-react';
 import type { PageRoute } from '@/data/types';
 import { getTopic } from '@/data/topics';
@@ -13,9 +13,21 @@ export function ScanPage({ navigate }: { navigate: (r: PageRoute) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   async function handleFile(file?: File) {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file) return;
     abortRef.current?.abort();
+    if (!file.type.startsWith('image/')) {
+      setError('Choose an image file to scan.');
+      setLoading(false);
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Choose an image smaller than 15 MB.');
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     abortRef.current = controller;
     setResult(null);
@@ -26,11 +38,14 @@ export function ScanPage({ navigate }: { navigate: (r: PageRoute) => void }) {
       setPreview(previewUrl);
       setResult(await scanImage(base64, controller.signal));
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') {
-        setError('Scan failed. Check that Ollama is running and gemma3:4b is pulled.');
+      if (controller.signal.aborted) return;
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError('Scan failed. Check that Ollama is running and the configured Gemma model is installed.');
       }
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) setLoading(false);
     }
   }
 
@@ -46,7 +61,11 @@ export function ScanPage({ navigate }: { navigate: (r: PageRoute) => void }) {
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = '';
+          void handleFile(file);
+        }}
       />
 
       <div

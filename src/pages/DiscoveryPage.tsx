@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { gemmaChat } from '@/lib/gemma';
 import { ArrowLeft, Bookmark, Lightbulb, CheckCircle2, ChevronRight, ChevronDown } from 'lucide-react';
 import type { PageRoute } from '@/data/types';
 import { getTopic } from '@/data/topics';
 import { DiscoveryCard } from '@/components/DiscoveryCard';
+import { AskGemma } from '@/components/AskGemma';
 
 interface DiscoveryPageProps {
   topicId: string;
@@ -19,6 +21,9 @@ export function DiscoveryPage({ topicId, navigate, isSaved, toggleSave }: Discov
   const [revealedAnswers, setRevealedAnswers] = useState<Set<number>>(new Set());
   const [showHints, setShowHints] = useState<Set<number>>(new Set());
 
+  const [generatedAnswers, setGeneratedAnswers] = useState<Record<number, string>>({});
+  const [loadingAnswers, setLoadingAnswers] = useState<Set<number>>(new Set());
+  const [answerErrors, setAnswerErrors] = useState<Record<number, string>>({});
   if (!topic) {
     return (
       <div className="container-editorial py-24 text-center">
@@ -34,6 +39,7 @@ export function DiscoveryPage({ topicId, navigate, isSaved, toggleSave }: Discov
     );
   }
 
+  const currentTopic = topic;
   const d = topic.discovery;
   const relatedTopics = d.relatedDiscoveryIds
     .map((id) => getTopic(id))
@@ -46,6 +52,91 @@ export function DiscoveryPage({ topicId, navigate, isSaved, toggleSave }: Discov
     return next;
   };
 
+  async function handleReveal(index: number, phase: (typeof d.learningFlow)[number]) {
+  // If the answer is already visible, hide it.
+  if (revealedAnswers.has(index)) {
+    setRevealedAnswers((previous) => {
+      const next = new Set(previous);
+      next.delete(index);
+      return next;
+    });
+    return;
+  }
+
+  // Reuse an answer already generated for this phase.
+  if (generatedAnswers[index]) {
+    setRevealedAnswers((previous) => new Set(previous).add(index));
+    return;
+  }
+
+  setLoadingAnswers((previous) => new Set(previous).add(index));
+
+  setAnswerErrors((previous) => {
+    const next = { ...previous };
+    delete next[index];
+    return next;
+  });
+
+  try {
+    const answer = await gemmaChat({
+      messages: [
+        {
+          role: 'system',
+          content: [
+            'You are the WonderLens AI science and STEM tutor.',
+            'Teach curious students using clear, beginner-friendly language.',
+            'Generate an original answer to the specific learning question.',
+            'Use the topic context to make the answer relevant.',
+            'Explain the reasoning rather than simply giving a one-line answer.',
+            'Use a concrete example when helpful.',
+            'Keep the answer under 120 words.',
+            'Do not search for or select existing topics.',
+            'Return only the educational answer.',
+          ].join(' '),
+        },
+        {
+          role: 'user',
+          content: [
+            `Discovery topic: ${currentTopic.question}`,
+            `Topic summary: ${currentTopic.shortAnswer}`,
+            `Learning phase: ${phase.phase}`,
+            `Question: ${phase.question}`,
+            userAnswers[index]?.trim()
+              ? `The student's answer: ${userAnswers[index]}`
+              : 'The student has not provided an answer yet.',
+            'Generate an educational response that explains this question.',
+            'If the student provided an answer, respond to their reasoning constructively.',
+          ].join('\n\n'),
+        },
+      ],
+    });
+
+    if (!answer.trim()) {
+      throw new Error('Gemma returned an empty answer. Please try again.');
+    }
+
+    setGeneratedAnswers((previous) => ({
+      ...previous,
+      [index]: answer.trim(),
+    }));
+
+    setRevealedAnswers((previous) => new Set(previous).add(index));
+  } catch (error) {
+    setAnswerErrors((previous) => ({
+      ...previous,
+      [index]:
+        error instanceof Error
+          ? error.message
+          : 'Gemma could not generate an answer. Please try again.',
+    }));
+  } finally {
+    setLoadingAnswers((previous) => {
+      const next = new Set(previous);
+      next.delete(index);
+      return next;
+    });
+  }
+}
   return (
     <div className="animate-fade-in">
       {/* Back nav */}
@@ -255,10 +346,15 @@ export function DiscoveryPage({ topicId, navigate, isSaved, toggleSave }: Discov
                     </button>
                   )}
                   <button
-                    onClick={() => setRevealedAnswers(toggleSet(revealedAnswers, i))}
+                    onClick={() => handleReveal(i, phase)}
                     className="flex items-center gap-1 text-sm text-forest hover:text-forest-dark transition-colors font-medium"
                   >
-                    {revealedAnswers.has(i) ? 'Hide response' : 'Reveal response'}
+                    {loadingAnswers.has(i)
+  ? 'Gemma is thinking...'
+  : revealedAnswers.has(i)
+    ? 'Hide response'
+    : 'Ask Gemma for an answer'}
+    disabled={loadingAnswers.has(i)}
                     <ChevronDown
                       className={`w-3.5 h-3.5 transition-transform ${revealedAnswers.has(i) ? 'rotate-180' : ''}`}
                       strokeWidth={1.5}
@@ -274,19 +370,58 @@ export function DiscoveryPage({ topicId, navigate, isSaved, toggleSave }: Discov
                   </div>
                 )}
 
-                {revealedAnswers.has(i) && (
-                  <div className="mt-3 p-3 bg-forest-pale rounded-lg border border-forest/15 animate-fade-in">
-                    <p className="text-sm text-ink leading-relaxed">
-                      <span className="font-medium text-forest">Response:</span> {phase.answer}
-                    </p>
-                  </div>
-                )}
+                {answerErrors[i] && (
+  <div
+    role="alert"
+    className="mt-3 p-3 rounded-lg border border-terracotta/20 bg-page"
+  >
+    <p className="text-sm text-terracotta">
+      {answerErrors[i]}
+    </p>
+
+    <button
+      type="button"
+      onClick={() => handleReveal(i, phase)}
+      className="mt-2 text-sm font-medium text-forest hover:underline"
+    >
+      Try again
+    </button>
+  </div>
+)}
+
+{loadingAnswers.has(i) && (
+  <div
+    role="status"
+    className="mt-3 p-3 rounded-lg border border-forest/15 bg-forest-pale"
+  >
+    <p className="text-sm text-ink-muted">
+      Gemma is generating an explanation for this question...
+    </p>
+  </div>
+)}
+
+{revealedAnswers.has(i) && generatedAnswers[i] && (
+  <div className="mt-3 p-3 bg-forest-pale rounded-lg border border-forest/15 animate-fade-in">
+    <p className="text-xs font-mono uppercase tracking-wider text-forest mb-2">
+      Generated by Gemma
+    </p>
+
+    <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">
+      {generatedAnswers[i]}
+    </p>
+
+    <p className="mt-3 text-xs text-ink-muted">
+      AI-generated content can contain mistakes. Use it as a starting point
+      for further exploration.
+    </p>
+  </div>
+)}
               </div>
             ))}
           </div>
         </div>
       </section>
-
+      <AskGemma topic={topic} />
       {/* Related discoveries */}
       {relatedTopics.length > 0 && (
         <section className="container-editorial pb-12">
@@ -330,16 +465,7 @@ function BinarySearchDemo() {
     setAutoPlay(false);
   };
 
-  useEffect(() => {
-    if (!autoPlay) return;
-    if (step >= steps.length - 1) {
-      setAutoPlay(false);
-      return;
-    }
-    const timer = setTimeout(() => setStep((s) => s + 1), 800);
-    return () => clearTimeout(timer);
-  }, [autoPlay, step, steps.length]);
-
+  
   return (
     <div className="p-6 sm:p-8 bg-page rounded-xl border border-ink/8">
       <h3 className="font-serif text-xl text-ink mb-2">Interactive: Binary Search in Action</h3>
