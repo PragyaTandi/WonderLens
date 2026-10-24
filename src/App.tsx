@@ -1,3 +1,4 @@
+import { ScanPage } from '@/pages/ScanPage';
 import StemHero from "./StemHero";
 import { useRouter } from '@/hooks/useRouter';
 import { useCollection } from '@/hooks/useCollection';
@@ -37,10 +38,11 @@ export default function App() {
           <CollectionPage
             savedIds={savedIds}
             navigate={navigate}
-            isSaved={isSaved}
+           isSaved={isSaved}
             toggleSave={toggleSave}
           />
         )}
+        {route.name === 'scan' && <ScanPage />}
       </main>
 
       <Footer />

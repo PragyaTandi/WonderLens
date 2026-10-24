@@ -6,6 +6,7 @@ function parseHash(): PageRoute {
   if (hash === '/explore') return { name: 'explore' };
   if (hash === '/rediscover') return { name: 'rediscover' };
   if (hash === '/collection') return { name: 'collection' };
+  if (hash === '/scan') return { name: 'scan' };
   if (hash.startsWith('/discovery/')) {
     return { name: 'discovery', topicId: hash.slice('/discovery/'.length) };
   }
@@ -18,6 +19,7 @@ export function routeToHash(route: PageRoute): string {
     case 'explore': return '/explore';
     case 'rediscover': return '/rediscover';
     case 'collection': return '/collection';
+    case 'scan': return '/scan';
     case 'discovery': return `/discovery/${route.topicId}`;
   }
 }

@@ -3,7 +3,8 @@ export type PageRoute =
   | { name: 'explore' }
   | { name: 'rediscover' }
   | { name: 'discovery'; topicId: string }
-  | { name: 'collection' };
+  | { name: 'collection' }
+  | { name: 'scan' };
 
 export type SubjectCategory =
   | 'Nature'

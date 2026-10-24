@@ -1,4 +1,4 @@
-import { Compass, BookOpen, Bookmark, Leaf } from 'lucide-react';
+import { Compass, BookOpen, Bookmark, Leaf, ScanSearch } from 'lucide-react';
 import type { PageRoute } from '@/data/types';
 
 interface NavProps {
@@ -46,6 +46,7 @@ export function Navigation({ route, navigate, collectionCount }: NavProps) {
             { name: 'collection' },
             isActive('collection'),
           )}
+          {navItem('Scan', <ScanSearch className="w-4 h-4" strokeWidth={1.5} />, { name: 'scan' }, isActive('scan'))}
           {collectionCount > 0 && (
             <span className="ml-0.5 text-xs font-mono text-mustard bg-mustard-pale px-1.5 py-0.5 rounded-full">
               {collectionCount}
